@@ -2,9 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Admin Panel</title>
+<title>Admin / Sahip Panel Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
 *{box-sizing:border-box}
 body{
@@ -12,147 +11,92 @@ body{
   font-family:Segoe UI,Arial;
   background:linear-gradient(135deg,#020617,#0f172a);
   color:#e5e7eb;
-}
-.container{
-  max-width:1200px;
-  margin:auto;
-  padding:25px;
-}
-h2,h3{margin:0 0 15px}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:20px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
 }
 .card{
   background:rgba(255,255,255,.06);
   border-radius:14px;
-  padding:20px;
+  padding:25px;
+  width:100%;
+  max-width:400px;
+  text-align:center;
 }
 input,button{
   width:100%;
   height:44px;
+  margin-bottom:10px;
   border-radius:8px;
   border:none;
   padding:0 12px;
   font-size:14px;
 }
-input{
-  background:#020617;
-  color:white;
-}
-button{
-  background:#6366f1;
-  color:white;
-  font-weight:600;
-  cursor:pointer;
-}
-button.secondary{background:#334155}
-button:hover{opacity:.9}
+input{background:#020617;color:white}
+button{background:#6366f1;color:white;font-weight:600;cursor:pointer}
+button.secondary{background:#334155;margin-top:10px}
 .hidden{display:none}
-.alert{
-  background:#22c55e;
-  padding:12px;
-  border-radius:10px;
-  margin-bottom:20px;
-}
-.footer{
-  position:fixed;
-  bottom:10px;
-  right:15px;
-  opacity:.6;
-  font-size:13px;
-}
+#error{color:#f87171;margin-top:10px;font-size:13px}
+.footer{position:fixed;bottom:10px;right:15px;opacity:.6;font-size:13px}
 </style>
 </head>
-
 <body>
 
-<div class="container">
-
-<!-- LOGIN -->
-<div class="card" id="loginBox" style="max-width:400px;margin:auto">
-<h2>🔐 Admin Giriş</h2>
-<input type="password" id="adminPass" placeholder="Admin Şifresi">
-<button onclick="login()">Giriş Yap</button>
-<p id="error" style="color:#f87171;margin-top:10px"></p>
+<div class="card" id="loginBox">
+  <h2>🔐 Panel Giriş</h2>
+  <input id="username" placeholder="Kullanıcı adı">
+  <input type="password" id="password" placeholder="Şifre">
+  <button onclick="login()">Giriş Yap</button>
+  <p id="error"></p>
 </div>
 
-<!-- PANEL -->
-<div class="hidden" id="panel">
-
-<div class="alert">👋 Merhaba Admin, yönetim paneline hoş geldin</div>
-
-<div class="grid">
-
-<!-- NAV -->
-<div class="card">
-<h3>📍 Sayfalar</h3>
-<button onclick="goRegister()">Register</button>
-<button class="secondary" onclick="goLogin()">Login</button>
-</div>
-
-<!-- REFERANS KODLARI -->
-<div class="card">
-<h3>🎟 Referans Kodları</h3>
-
-<button onclick="createRef('vip')" style="margin-bottom:6px">
-VIP Referans Kodu Oluştur
-</button>
-<input id="vipRef" readonly placeholder="VIP kodu" style="margin-bottom:12px">
-
-<button class="secondary" onclick="createRef('admin')" style="margin-bottom:6px">
-Admin Referans Kodu Oluştur
-</button>
-<input id="adminRef" readonly placeholder="Admin kodu" style="margin-bottom:12px">
-
-<button class="secondary" onclick="createRef('sahip')">
-Sahip Referans Kodu Oluştur
-</button>
-<input id="ownerRef" readonly placeholder="Sahip kodu" style="margin-top:8px">
-
-</div>
-
-</div>
-</div>
-
+<div class="card hidden" id="panelSelect">
+  <h2>🎯 Panel Seçimi</h2>
+  <p>Merhaba <span id="displayUser"></span> — Rütbe: <span id="displayRole" style="font-weight:bold"></span></p>
+  <button onclick="openAdmin()">Admin Paneline Git</button>
+  <button class="secondary" onclick="openSahip()">Sahip Paneline Git</button>
 </div>
 
 <div class="footer">Tasarımcı : Muhammet Çınar</div>
 
 <script>
-const ADMIN_PASSWORD = "4575";
+// ✅ Örnek hesaplar
+const users = [
+  {username:"admin1", password:"4575", role:"admin"},
+  {username:"sahip1", password:"1234", role:"sahip"}
+];
+
+let currentUser = null;
 
 function login(){
-  const pass = document.getElementById("adminPass").value;
-  if(pass === ADMIN_PASSWORD){
-    document.getElementById("loginBox").style.display="none";
-    document.getElementById("panel").style.display="block";
-  }else{
-    document.getElementById("error").innerText="Hatalı şifre";
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+  const found = users.find(x => x.username===u && x.password===p);
+  if(found){
+    currentUser = found;
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("panelSelect").classList.remove("hidden");
+    document.getElementById("displayUser").innerText = found.username;
+    document.getElementById("displayRole").innerText = found.role.charAt(0).toUpperCase() + found.role.slice(1);
+  } else {
+    document.getElementById("error").innerText = "Kullanıcı adı veya şifre yanlış";
   }
 }
 
-function goRegister(){
-  window.location.href="register.html";
-}
-function goLogin(){
-  window.location.href="login.html";
+function openAdmin(){
+  if(currentUser.role==="admin"){
+    window.location.href="Adminpanel-admin-ABC123.html"; // admin panel linki
+  } else {
+    alert("Hatalı erişim! Sadece adminler bu paneli açabilir.");
+  }
 }
 
-function randomCode(prefix){
-  return prefix.toUpperCase()+"-"+Math.random().toString(36).substring(2,8).toUpperCase();
-}
-
-function createRef(type){
-  if(type==="vip"){
-    document.getElementById("vipRef").value = randomCode("vip");
-  }
-  if(type==="admin"){
-    document.getElementById("adminRef").value = randomCode("admin");
-  }
-  if(type==="sahip"){
-    document.getElementById("ownerRef").value = randomCode("sahip");
+function openSahip(){
+  if(currentUser.role==="sahip"){
+    window.location.href="Adminpanel-sahip-XYZ789.html"; // sahip panel linki
+  } else {
+    alert("Hatalı erişim! Sadece sahipler bu paneli açabilir.");
   }
 }
 </script>
