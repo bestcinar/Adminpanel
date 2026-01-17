@@ -5,201 +5,199 @@
 <title>Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
   margin:0;
-  font-family:Arial;
-  background:linear-gradient(135deg,#020617,#1e293b);
-  color:#e5e7eb;
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  font-family:Segoe UI,Arial;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:white;
+  overflow-x:hidden;
 }
-.box{
-  width:100%;
+.container{
   max-width:1000px;
-  background:#020617;
-  padding:20px;
-  border-radius:18px;
-  box-shadow:0 0 40px rgba(79,70,229,.3);
+  margin:auto;
+  padding:30px;
 }
-h2,h3{text-align:center}
+.card{
+  background:rgba(255,255,255,.05);
+  border-radius:15px;
+  padding:25px;
+  margin-bottom:20px;
+  box-shadow:0 0 30px rgba(0,0,0,.4);
+  animation:fadeUp .8s ease;
+}
 input,button{
   width:100%;
   padding:12px;
-  margin-top:10px;
-  border-radius:10px;
+  border-radius:8px;
   border:none;
-}
-input{
-  background:#020617;
-  color:white;
-  border:1px solid #334155;
+  margin-top:10px;
 }
 button{
-  background:#4f46e5;
+  background:#6366f1;
   color:white;
+  font-weight:bold;
   cursor:pointer;
 }
+button:hover{opacity:.9}
 .hidden{display:none}
-.top{display:flex;gap:10px;margin-bottom:15px}
-@media(max-width:600px){.top{flex-direction:column}}
-.card{
-  background:#020617;
-  border:1px solid #334155;
-  border-radius:12px;
-  padding:12px;
-  margin-top:12px;
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(40px)}
+  to{opacity:1;transform:none}
 }
-.small{color:#94a3b8;font-size:12px}
-footer{text-align:right;font-size:12px;color:#94a3b8;margin-top:15px}
+.footer{
+  position:fixed;
+  bottom:10px;
+  right:15px;
+  opacity:.6;
+  font-size:13px;
+}
+.alert{
+  background:#22c55e;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
+  animation:slide .6s ease;
+}
+@keyframes slide{
+  from{transform:translateX(100%)}
+  to{transform:none}
+}
 </style>
 </head>
 
 <body>
 
-<!-- ADMIN LOGIN -->
-<div class="box" id="loginBox">
-  <h2>🔐 Admin Girişi</h2>
-  <input type="password" id="adminPass" placeholder="Admin Şifresi">
-  <button onclick="adminLogin()">Giriş Yap</button>
+<div class="container">
+
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+<h2>🔐 Admin Giriş</h2>
+<input type="password" id="adminPass" placeholder="Admin Şifresi">
+<button onclick="login()">Giriş Yap</button>
+<p id="error" style="color:#f87171"></p>
 </div>
 
 <!-- PANEL -->
-<div class="box hidden" id="panelBox">
-  <h2>⚙ Yönetim Paneli</h2>
+<div class="hidden" id="panel">
 
-  <div class="top">
-    <button onclick="goRegister()">➕ Kayıt Ol</button>
-    <button onclick="goLogin()">🔑 Giriş Yap</button>
-    <button onclick="logout()">🚪 Çıkış</button>
-  </div>
+<div class="alert">👋 Merhaba Admin, hoş geldin!</div>
 
-  <h3>👥 Kayıtlı Kullanıcılar</h3>
-  <div id="users"></div>
-
-  <h3>📜 Giriş Geçmişi</h3>
-  <div id="history"></div>
-
-  <footer>Tasarımcı : Muhammet Çınar</footer>
+<div class="card">
+<h3>📊 Dashboard</h3>
+<canvas id="chart"></canvas>
 </div>
 
+<div class="card">
+<h3>👑 Adminler</h3>
+<ul id="adminList"></ul>
+</div>
+
+<div class="card">
+<h3>🕒 Giriş Geçmişi</h3>
+<ul id="logList"></ul>
+</div>
+
+<div class="card">
+<h3>🔑 Admin Şifre Değiştir</h3>
+<input type="password" id="oldPass" placeholder="Mevcut Şifre">
+<input type="password" id="newPass" placeholder="Yeni Şifre">
+<input type="password" id="newPass2" placeholder="Yeni Şifre (Tekrar)">
+<button onclick="changePass()">Değiştir</button>
+</div>
+
+<button onclick="logout()">Çıkış Yap</button>
+</div>
+
+</div>
+
+<div class="footer">Tasarımcı: Muhammet Çınar</div>
+
 <script>
-/* ===================== AYARLAR ===================== */
-const ADMIN_PASSWORD = "4575";
-const SESSION_TIME = 15 * 60 * 1000; // 15 dk
-const ADMIN_ROLE = "superadmin"; // superadmin | admin
+const SESSION_TIME=10*60*1000;
+let tries=0;
 
-/* ===================== HASH ===================== */
-async function hash(text){
-  const enc = new TextEncoder().encode(text);
-  const buf = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf))
-    .map(b=>b.toString(16).padStart(2,"0")).join("");
+function hash(t){
+  return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t))
+  .then(b=>Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join(""));
 }
 
-/* ===================== SESSION ===================== */
-function setSession(){
-  localStorage.setItem("adminSession",
-    JSON.stringify({time:Date.now(),role:ADMIN_ROLE}));
+if(!localStorage.admins){
+  hash("4575").then(h=>{
+    localStorage.admins=JSON.stringify([{pass:h,mail:"admin@mail.com"}]);
+  })
 }
 
-function checkSession(){
-  const s = JSON.parse(localStorage.getItem("adminSession"));
-  if(!s) return false;
-  if(Date.now() - s.time > SESSION_TIME){
-    localStorage.removeItem("adminSession");
-    alert("Oturum süresi doldu");
-    return false;
-  }
-  return true;
-}
-
-/* ===================== ADMIN LOGIN ===================== */
-async function adminLogin(){
-  if(adminPass.value === ADMIN_PASSWORD){
-    setSession();
-    loginBox.classList.add("hidden");
-    panelBox.classList.remove("hidden");
-    loadUsers();
-    loadHistory();
-  }else alert("Yanlış şifre");
-}
-
-if(checkSession()){
-  loginBox.classList.add("hidden");
-  panelBox.classList.remove("hidden");
-  loadUsers();
-  loadHistory();
+function login(){
+  const pass=document.getElementById("adminPass").value;
+  hash(pass).then(h=>{
+    const admins=JSON.parse(localStorage.admins);
+    if(admins.find(a=>a.pass===h)){
+      sessionStorage.login=Date.now();
+      log("Admin giriş yaptı");
+      document.getElementById("loginBox").classList.add("hidden");
+      document.getElementById("panel").classList.remove("hidden");
+      load();
+    }else{
+      tries++;
+      document.getElementById("error").innerText="Hatalı şifre ("+tries+"/3)";
+      if(tries>=3) alert("⛔ Çok fazla deneme!");
+    }
+  })
 }
 
 function logout(){
-  localStorage.removeItem("adminSession");
+  sessionStorage.clear();
   location.reload();
 }
 
-function goRegister(){location.href="/register"}
-function goLogin(){location.href="/Login"}
+function load(){
+  const admins=JSON.parse(localStorage.admins);
+  document.getElementById("adminList").innerHTML=
+    admins.map(a=>"<li>"+a.mail+"</li>").join("");
 
-/* ===================== USERS ===================== */
-async function loadUsers(){
-  const box=document.getElementById("users");
-  const users=JSON.parse(localStorage.getItem("users"))||[];
-  box.innerHTML="";
+  document.getElementById("logList").innerHTML=
+    (JSON.parse(localStorage.logs||"[]")).map(l=>"<li>"+l+"</li>").join("");
 
-  if(users.length===0){
-    box.innerHTML="Kayıtlı kullanıcı yok";
-    return;
-  }
-
-  for(let i=0;i<users.length;i++){
-    const u=users[i];
-    box.innerHTML+=`
-      <div class="card">
-        <b>Email:</b> ${u.email}<br>
-        <b>Takma Ad:</b> ${u.nickname}<br>
-        <b>İsim:</b> ${u.name}<br>
-        <b>Şifre (HASH):</b><br>
-        <small class="small">${u.password}</small><br>
-        ${ADMIN_ROLE==="superadmin"
-          ? `<button style="background:#dc2626" onclick="deleteUser(${i})">Sil</button>`
-          : `<small class="small">Silme yetkisi yok</small>`
-        }
-      </div>`;
-  }
+  new Chart(document.getElementById("chart"),{
+    type:"bar",
+    data:{
+      labels:["Girişler"],
+      datasets:[{data:[(JSON.parse(localStorage.logs||"[]")).length]}]
+    }
+  })
 }
 
-function deleteUser(i){
-  if(ADMIN_ROLE!=="superadmin") return;
-  if(confirm("Kullanıcı silinsin mi?")){
-    const users=JSON.parse(localStorage.getItem("users"));
-    users.splice(i,1);
-    localStorage.setItem("users",JSON.stringify(users));
-    loadUsers();
-  }
+function log(t){
+  const logs=JSON.parse(localStorage.logs||"[]");
+  logs.push(new Date().toLocaleString()+" - "+t);
+  localStorage.logs=JSON.stringify(logs);
 }
 
-/* ===================== LOGIN HISTORY ===================== */
-function loadHistory(){
-  const box=document.getElementById("history");
-  const h=JSON.parse(localStorage.getItem("loginHistory"))||[];
-  box.innerHTML="";
-
-  if(h.length===0){
-    box.innerHTML="Henüz giriş yok";
-    return;
-  }
-
-  h.slice().reverse().forEach(x=>{
-    box.innerHTML+=`
-      <div class="card">
-        <b>${x.email}</b><br>
-        ${x.time}<br>
-        <small class="small">${x.device}</small>
-      </div>`;
-  });
+function changePass(){
+  const o=document.getElementById("oldPass").value;
+  const n=document.getElementById("newPass").value;
+  const n2=document.getElementById("newPass2").value;
+  if(n!==n2) return alert("Şifreler uyuşmuyor");
+  hash(o).then(oh=>{
+    const admins=JSON.parse(localStorage.admins);
+    if(admins[0].pass!==oh) return alert("Eski şifre yanlış");
+    hash(n).then(nh=>{
+      admins[0].pass=nh;
+      localStorage.admins=JSON.stringify(admins);
+      alert("Şifre değiştirildi");
+    })
+  })
 }
+
+setInterval(()=>{
+  if(sessionStorage.login && Date.now()-sessionStorage.login>SESSION_TIME){
+    alert("⏳ Oturum süresi doldu");
+    logout();
+  }
+},5000);
 </script>
 
 </body>
