@@ -4,48 +4,41 @@
 <meta charset="UTF-8">
 <title>Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   margin:0;
   font-family:Segoe UI,Arial;
-  background:linear-gradient(135deg,#0f172a,#020617);
+  background:linear-gradient(135deg,#020617,#0f172a);
   color:white;
-  overflow-x:hidden;
 }
-.container{
-  max-width:1000px;
-  margin:auto;
-  padding:30px;
-}
+.container{max-width:1100px;margin:auto;padding:25px}
 .card{
-  background:rgba(255,255,255,.05);
+  background:rgba(255,255,255,.06);
   border-radius:15px;
-  padding:25px;
+  padding:20px;
   margin-bottom:20px;
-  box-shadow:0 0 30px rgba(0,0,0,.4);
-  animation:fadeUp .8s ease;
+  animation:fade .7s ease;
 }
-input,button{
+h2,h3{margin-top:0}
+button,input{
   width:100%;
   padding:12px;
-  border-radius:8px;
-  border:none;
   margin-top:10px;
+  border:none;
+  border-radius:8px;
 }
-button{
-  background:#6366f1;
-  color:white;
-  font-weight:bold;
-  cursor:pointer;
-}
+button{background:#6366f1;color:white;font-weight:bold;cursor:pointer}
 button:hover{opacity:.9}
 .hidden{display:none}
-@keyframes fadeUp{
-  from{opacity:0;transform:translateY(40px)}
-  to{opacity:1;transform:none}
+.list li{margin:6px 0;font-size:14px}
+.alert{
+  background:#22c55e;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:15px;
+  animation:slide .6s ease;
 }
 .footer{
   position:fixed;
@@ -54,17 +47,8 @@ button:hover{opacity:.9}
   opacity:.6;
   font-size:13px;
 }
-.alert{
-  background:#22c55e;
-  padding:15px;
-  border-radius:10px;
-  margin-bottom:15px;
-  animation:slide .6s ease;
-}
-@keyframes slide{
-  from{transform:translateX(100%)}
-  to{transform:none}
-}
+@keyframes fade{from{opacity:0;transform:translateY(20px)}to{opacity:1}}
+@keyframes slide{from{transform:translateX(100%)}to{transform:none}}
 </style>
 </head>
 
@@ -83,7 +67,7 @@ button:hover{opacity:.9}
 <!-- PANEL -->
 <div class="hidden" id="panel">
 
-<div class="alert">👋 Merhaba Admin, hoş geldin!</div>
+<div class="alert">👋 Merhaba Admin</div>
 
 <div class="card">
 <h3>📊 Dashboard</h3>
@@ -91,21 +75,25 @@ button:hover{opacity:.9}
 </div>
 
 <div class="card">
+<h3>🎟️ VIP Referans Kodu</h3>
+<button onclick="createCode()">Referans Kodu Oluştur</button>
+<input id="vipCode" readonly placeholder="Kod burada oluşur">
+<button onclick="copyCode()">Kopyala</button>
+</div>
+
+<div class="card">
+<h3>👥 Kayıtlı Kullanıcılar</h3>
+<ul id="userList" class="list"></ul>
+</div>
+
+<div class="card">
+<h3>🔐 Kullanıcı Girişleri</h3>
+<ul id="loginList" class="list"></ul>
+</div>
+
+<div class="card">
 <h3>👑 Adminler</h3>
-<ul id="adminList"></ul>
-</div>
-
-<div class="card">
-<h3>🕒 Giriş Geçmişi</h3>
-<ul id="logList"></ul>
-</div>
-
-<div class="card">
-<h3>🔑 Admin Şifre Değiştir</h3>
-<input type="password" id="oldPass" placeholder="Mevcut Şifre">
-<input type="password" id="newPass" placeholder="Yeni Şifre">
-<input type="password" id="newPass2" placeholder="Yeni Şifre (Tekrar)">
-<button onclick="changePass()">Değiştir</button>
+<ul id="adminList" class="list"></ul>
 </div>
 
 <button onclick="logout()">Çıkış Yap</button>
@@ -116,36 +104,18 @@ button:hover{opacity:.9}
 <div class="footer">Tasarımcı: Muhammet Çınar</div>
 
 <script>
-const SESSION_TIME=10*60*1000;
-let tries=0;
-
-function hash(t){
-  return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t))
-  .then(b=>Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join(""));
-}
-
-if(!localStorage.admins){
-  hash("4575").then(h=>{
-    localStorage.admins=JSON.stringify([{pass:h,mail:"admin@mail.com"}]);
-  })
-}
+const ADMIN_PASS="4575";
+const SESSION=10*60*1000;
 
 function login(){
-  const pass=document.getElementById("adminPass").value;
-  hash(pass).then(h=>{
-    const admins=JSON.parse(localStorage.admins);
-    if(admins.find(a=>a.pass===h)){
-      sessionStorage.login=Date.now();
-      log("Admin giriş yaptı");
-      document.getElementById("loginBox").classList.add("hidden");
-      document.getElementById("panel").classList.remove("hidden");
-      load();
-    }else{
-      tries++;
-      document.getElementById("error").innerText="Hatalı şifre ("+tries+"/3)";
-      if(tries>=3) alert("⛔ Çok fazla deneme!");
-    }
-  })
+  if(document.getElementById("adminPass").value===ADMIN_PASS){
+    sessionStorage.login=Date.now();
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("panel").classList.remove("hidden");
+    load();
+  }else{
+    document.getElementById("error").innerText="Yanlış şifre";
+  }
 }
 
 function logout(){
@@ -154,46 +124,41 @@ function logout(){
 }
 
 function load(){
-  const admins=JSON.parse(localStorage.admins);
-  document.getElementById("adminList").innerHTML=
-    admins.map(a=>"<li>"+a.mail+"</li>").join("");
+  const users=JSON.parse(localStorage.users||"[]");
+  const logs=JSON.parse(localStorage.userLogs||"[]");
 
-  document.getElementById("logList").innerHTML=
-    (JSON.parse(localStorage.logs||"[]")).map(l=>"<li>"+l+"</li>").join("");
+  document.getElementById("userList").innerHTML=
+    users.map(u=>`<li>
+      📧 ${u.email} | 👤 ${u.username} | ⭐ ${u.vip?"VIP":"Normal"}
+    </li>`).join("");
+
+  document.getElementById("loginList").innerHTML=
+    logs.map(l=>`<li>${l}</li>`).join("");
 
   new Chart(document.getElementById("chart"),{
     type:"bar",
     data:{
-      labels:["Girişler"],
-      datasets:[{data:[(JSON.parse(localStorage.logs||"[]")).length]}]
+      labels:["Kullanıcılar","Girişler"],
+      datasets:[{data:[users.length,logs.length]}]
     }
-  })
+  });
 }
 
-function log(t){
-  const logs=JSON.parse(localStorage.logs||"[]");
-  logs.push(new Date().toLocaleString()+" - "+t);
-  localStorage.logs=JSON.stringify(logs);
+function createCode(){
+  const code="VIP-"+Math.random().toString(36).substr(2,4).toUpperCase()+"-"+Math.random().toString(36).substr(2,4).toUpperCase();
+  document.getElementById("vipCode").value=code;
+  const codes=JSON.parse(localStorage.vipCodes||"[]");
+  codes.push(code);
+  localStorage.vipCodes=JSON.stringify(codes);
 }
 
-function changePass(){
-  const o=document.getElementById("oldPass").value;
-  const n=document.getElementById("newPass").value;
-  const n2=document.getElementById("newPass2").value;
-  if(n!==n2) return alert("Şifreler uyuşmuyor");
-  hash(o).then(oh=>{
-    const admins=JSON.parse(localStorage.admins);
-    if(admins[0].pass!==oh) return alert("Eski şifre yanlış");
-    hash(n).then(nh=>{
-      admins[0].pass=nh;
-      localStorage.admins=JSON.stringify(admins);
-      alert("Şifre değiştirildi");
-    })
-  })
+function copyCode(){
+  navigator.clipboard.writeText(document.getElementById("vipCode").value);
+  alert("Kod kopyalandı");
 }
 
 setInterval(()=>{
-  if(sessionStorage.login && Date.now()-sessionStorage.login>SESSION_TIME){
+  if(sessionStorage.login && Date.now()-sessionStorage.login>SESSION){
     alert("⏳ Oturum süresi doldu");
     logout();
   }
