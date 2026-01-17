@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Sahip Panel</title>
+<title>Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -14,145 +14,165 @@ body{
   color:#e5e7eb;
 }
 .container{
-  max-width:1100px;
+  max-width:1200px;
   margin:auto;
   padding:25px;
+}
+h2,h3{margin:0 0 15px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:20px;
 }
 .card{
   background:rgba(255,255,255,.06);
   border-radius:14px;
   padding:20px;
 }
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:20px;
-}
-h2,h3{margin:0 0 15px}
-input,button{
-  width:100%;
-  height:44px;
-  border-radius:8px;
-  border:none;
-  padding:0 12px;
-  font-size:14px;
-}
-input{background:#020617;color:white}
 button{
+  width:100%;
+  height:46px;
+  border-radius:10px;
+  border:none;
+  font-size:14px;
   font-weight:600;
   cursor:pointer;
-  color:white;
 }
+.primary{background:#6366f1;color:white}
+.secondary{background:#334155;color:white}
 button:hover{opacity:.9}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+th,td{
+  padding:8px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  text-align:left;
+}
+th{color:#93c5fd}
+
+.badge-admin{color:#60a5fa;font-weight:700}
+.badge-owner{color:#f87171;font-weight:700}
+
 .hidden{display:none}
-.alert{
-  background:#16a34a;
-  padding:12px;
-  border-radius:10px;
-  margin-bottom:20px;
-}
-.rank{
-  color:#ef4444;
-  font-weight:800;
-  margin-top:5px;
-}
-.code{
-  background:#020617;
-  text-align:center;
-  letter-spacing:2px;
-  font-weight:bold;
-}
+
 .footer{
   position:fixed;
   bottom:10px;
   right:15px;
-  opacity:.6;
   font-size:13px;
+  opacity:.6;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-<!-- LOGIN -->
-<div class="card" id="loginBox" style="max-width:400px;margin:auto">
-<h2>🔐 Sahip Giriş</h2>
-<input id="username" placeholder="Kullanıcı adı">
-<input type="password" id="password" placeholder="Şifre">
-<button style="background:#dc2626" onclick="login()">Giriş Yap</button>
-<p id="error" style="color:#f87171;margin-top:10px"></p>
-</div>
-
-<!-- PANEL -->
-<div class="hidden" id="panel">
-
-<div class="alert">
-👋 Hoş geldin Sahip
-<div class="rank">Rütbe : SAHİP</div>
-</div>
+<h2>👋 Merhaba <span id="rankText"></span></h2>
 
 <div class="grid">
 
-<!-- SAYFALAR -->
+<!-- FREE & VIP USERS -->
 <div class="card">
-<h3>📍 Sayfalar</h3>
-<button style="background:#6366f1" onclick="goRegister()">Register</button>
-<button style="background:#334155" onclick="goLogin()">Login</button>
+<h3>👥 Free / VIP Kullanıcılar</h3>
+<table>
+<thead>
+<tr>
+<th>Kullanıcı</th>
+<th>Tür</th>
+<th>Son Giriş</th>
+<th>Cihaz</th>
+</tr>
+</thead>
+<tbody id="userList"></tbody>
+</table>
+<p style="font-size:12px;opacity:.6;margin-top:8px">
+Admin kullanıcıları **sadece görüntüler**, düzenleyemez.
+</p>
 </div>
 
-<!-- REFERANS -->
+<!-- ADMINS (ONLY OWNER) -->
+<div class="card hidden" id="adminBox">
+<h3>👑 Admin Hesapları</h3>
+<table>
+<thead>
+<tr>
+<th>Kullanıcı</th>
+<th>Rütbe</th>
+<th>Son Giriş</th>
+</tr>
+</thead>
+<tbody id="adminList"></tbody>
+</table>
+<p style="font-size:12px;opacity:.6;margin-top:8px">
+Bu alan **sadece Sahip** tarafından görülebilir.
+</p>
+</div>
+
+<!-- ACTIONS -->
 <div class="card">
-<h3>🎟️ Referans Kodu Oluştur</h3>
-
-<button style="background:#22c55e" onclick="createCode('FREE')">Free Kullanıcı</button>
-<button style="background:#9333ea" onclick="createCode('VIP')">VIP Kullanıcı</button>
-<button style="background:#2563eb" onclick="createCode('ADMIN')">Admin</button>
-<button style="background:#dc2626" onclick="createCode('SAHIP')">Sahip</button>
-
-<input id="refCode" class="code" readonly placeholder="Referans kodu burada oluşur">
+<h3>⚙️ İşlemler</h3>
+<button class="primary">VIP / Free Referans Kodu Oluştur</button>
+<button class="secondary" style="margin-top:10px">Çıkış Yap</button>
 </div>
 
 </div>
 </div>
-</div>
 
-<div class="footer">Tasarımcı: Muhammet Çınar</div>
+<div class="footer">Tasarımcı : Muhammet Çınar</div>
 
 <script>
-function login(){
-  const u=document.getElementById("username").value;
-  const p=document.getElementById("password").value;
-  if(u==="bestcinar" && p==="4575"){
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("panel").classList.remove("hidden");
-  }else{
-    document.getElementById("error").innerText="Hatalı giriş";
-  }
-}
+// ======= ROLE =======
+const currentUser = {
+  username: "bestcinar",
+  role: "sahip" // admin | sahip
+};
 
-function createCode(type){
-  const code =
-    type + "-" +
-    Math.random().toString(36).substr(2,4).toUpperCase() +
-    "-" +
-    Math.random().toString(36).substr(2,3).toUpperCase();
+document.getElementById("rankText").innerHTML =
+  currentUser.role === "sahip"
+  ? '<span class="badge-owner">Rütbe : Sahip</span>'
+  : '<span class="badge-admin">Rütbe : Admin</span>';
 
-  document.getElementById("refCode").value = code;
+// ======= SAMPLE DATA =======
+const users = [
+  {name:"ali01", type:"Free", last:"16.01.2026 22:41", device:"Mobil"},
+  {name:"mehmetvip", type:"VIP", last:"17.01.2026 01:12", device:"PC"}
+];
 
-  const list = JSON.parse(localStorage.refCodes || "[]");
-  list.push({type,code,date:new Date().toLocaleString()});
-  localStorage.refCodes = JSON.stringify(list);
-}
+const admins = [
+  {name:"bestcinar", role:"Sahip", last:"17.01.2026 04:30"},
+  {name:"admin01", role:"Admin", last:"16.01.2026 21:05"}
+];
 
-function goRegister(){
-  window.location.href="/adminregister";
-}
-function goLogin(){
-  window.location.href="/login";
+// ======= RENDER USERS =======
+const userList = document.getElementById("userList");
+users.forEach(u=>{
+  userList.innerHTML += `
+    <tr>
+      <td>${u.name}</td>
+      <td>${u.type}</td>
+      <td>${u.last}</td>
+      <td>${u.device}</td>
+    </tr>`;
+});
+
+// ======= RENDER ADMINS (OWNER ONLY) =======
+if(currentUser.role === "sahip"){
+  document.getElementById("adminBox").classList.remove("hidden");
+  const adminList = document.getElementById("adminList");
+  admins.forEach(a=>{
+    adminList.innerHTML += `
+      <tr>
+        <td>${a.name}</td>
+        <td>${a.role}</td>
+        <td>${a.last}</td>
+      </tr>`;
+  });
 }
 </script>
-
 </body>
 </html>
