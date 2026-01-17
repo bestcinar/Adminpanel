@@ -2,43 +2,65 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Admin Panel</title>
+<title>Sahip Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+*{box-sizing:border-box}
 body{
   margin:0;
   font-family:Segoe UI,Arial;
   background:linear-gradient(135deg,#020617,#0f172a);
-  color:white;
+  color:#e5e7eb;
 }
-.container{max-width:1100px;margin:auto;padding:25px}
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:25px;
+}
 .card{
   background:rgba(255,255,255,.06);
-  border-radius:15px;
+  border-radius:14px;
   padding:20px;
-  margin-bottom:20px;
-  animation:fade .7s ease;
 }
-h2,h3{margin-top:0}
-button,input{
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:20px;
+}
+h2,h3{margin:0 0 15px}
+input,button{
   width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
+  height:44px;
   border-radius:8px;
+  border:none;
+  padding:0 12px;
+  font-size:14px;
 }
-button{background:#6366f1;color:white;font-weight:bold;cursor:pointer}
+input{background:#020617;color:white}
+button{
+  font-weight:600;
+  cursor:pointer;
+  color:white;
+}
 button:hover{opacity:.9}
 .hidden{display:none}
-.list li{margin:6px 0;font-size:14px}
 .alert{
-  background:#22c55e;
+  background:#16a34a;
   padding:12px;
   border-radius:10px;
-  margin-bottom:15px;
-  animation:slide .6s ease;
+  margin-bottom:20px;
+}
+.rank{
+  color:#ef4444;
+  font-weight:800;
+  margin-top:5px;
+}
+.code{
+  background:#020617;
+  text-align:center;
+  letter-spacing:2px;
+  font-weight:bold;
 }
 .footer{
   position:fixed;
@@ -47,8 +69,6 @@ button:hover{opacity:.9}
   opacity:.6;
   font-size:13px;
 }
-@keyframes fade{from{opacity:0;transform:translateY(20px)}to{opacity:1}}
-@keyframes slide{from{transform:translateX(100%)}to{transform:none}}
 </style>
 </head>
 
@@ -57,112 +77,81 @@ button:hover{opacity:.9}
 <div class="container">
 
 <!-- LOGIN -->
-<div class="card" id="loginBox">
-<h2>🔐 Admin Giriş</h2>
-<input type="password" id="adminPass" placeholder="Admin Şifresi">
-<button onclick="login()">Giriş Yap</button>
-<p id="error" style="color:#f87171"></p>
+<div class="card" id="loginBox" style="max-width:400px;margin:auto">
+<h2>🔐 Sahip Giriş</h2>
+<input id="username" placeholder="Kullanıcı adı">
+<input type="password" id="password" placeholder="Şifre">
+<button style="background:#dc2626" onclick="login()">Giriş Yap</button>
+<p id="error" style="color:#f87171;margin-top:10px"></p>
 </div>
 
 <!-- PANEL -->
 <div class="hidden" id="panel">
 
-<div class="alert">👋 Merhaba Admin</div>
+<div class="alert">
+👋 Hoş geldin Sahip
+<div class="rank">Rütbe : SAHİP</div>
+</div>
 
+<div class="grid">
+
+<!-- SAYFALAR -->
 <div class="card">
-<h3>📊 Dashboard</h3>
-<canvas id="chart"></canvas>
+<h3>📍 Sayfalar</h3>
+<button style="background:#6366f1" onclick="goRegister()">Register</button>
+<button style="background:#334155" onclick="goLogin()">Login</button>
 </div>
 
+<!-- REFERANS -->
 <div class="card">
-<h3>🎟️ VIP Referans Kodu</h3>
-<button onclick="createCode()">Referans Kodu Oluştur</button>
-<input id="vipCode" readonly placeholder="Kod burada oluşur">
-<button onclick="copyCode()">Kopyala</button>
+<h3>🎟️ Referans Kodu Oluştur</h3>
+
+<button style="background:#22c55e" onclick="createCode('FREE')">Free Kullanıcı</button>
+<button style="background:#9333ea" onclick="createCode('VIP')">VIP Kullanıcı</button>
+<button style="background:#2563eb" onclick="createCode('ADMIN')">Admin</button>
+<button style="background:#dc2626" onclick="createCode('SAHIP')">Sahip</button>
+
+<input id="refCode" class="code" readonly placeholder="Referans kodu burada oluşur">
 </div>
 
-<div class="card">
-<h3>👥 Kayıtlı Kullanıcılar</h3>
-<ul id="userList" class="list"></ul>
 </div>
-
-<div class="card">
-<h3>🔐 Kullanıcı Girişleri</h3>
-<ul id="loginList" class="list"></ul>
 </div>
-
-<div class="card">
-<h3>👑 Adminler</h3>
-<ul id="adminList" class="list"></ul>
-</div>
-
-<button onclick="logout()">Çıkış Yap</button>
-</div>
-
 </div>
 
 <div class="footer">Tasarımcı: Muhammet Çınar</div>
 
 <script>
-const ADMIN_PASS="4575";
-const SESSION=10*60*1000;
-
 function login(){
-  if(document.getElementById("adminPass").value===ADMIN_PASS){
-    sessionStorage.login=Date.now();
+  const u=document.getElementById("username").value;
+  const p=document.getElementById("password").value;
+  if(u==="bestcinar" && p==="4575"){
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("panel").classList.remove("hidden");
-    load();
   }else{
-    document.getElementById("error").innerText="Yanlış şifre";
+    document.getElementById("error").innerText="Hatalı giriş";
   }
 }
 
-function logout(){
-  sessionStorage.clear();
-  location.reload();
+function createCode(type){
+  const code =
+    type + "-" +
+    Math.random().toString(36).substr(2,4).toUpperCase() +
+    "-" +
+    Math.random().toString(36).substr(2,3).toUpperCase();
+
+  document.getElementById("refCode").value = code;
+
+  const list = JSON.parse(localStorage.refCodes || "[]");
+  list.push({type,code,date:new Date().toLocaleString()});
+  localStorage.refCodes = JSON.stringify(list);
 }
 
-function load(){
-  const users=JSON.parse(localStorage.users||"[]");
-  const logs=JSON.parse(localStorage.userLogs||"[]");
-
-  document.getElementById("userList").innerHTML=
-    users.map(u=>`<li>
-      📧 ${u.email} | 👤 ${u.username} | ⭐ ${u.vip?"VIP":"Normal"}
-    </li>`).join("");
-
-  document.getElementById("loginList").innerHTML=
-    logs.map(l=>`<li>${l}</li>`).join("");
-
-  new Chart(document.getElementById("chart"),{
-    type:"bar",
-    data:{
-      labels:["Kullanıcılar","Girişler"],
-      datasets:[{data:[users.length,logs.length]}]
-    }
-  });
+function goRegister(){
+  window.location.href="/adminregister";
 }
-
-function createCode(){
-  const code="VIP-"+Math.random().toString(36).substr(2,4).toUpperCase()+"-"+Math.random().toString(36).substr(2,4).toUpperCase();
-  document.getElementById("vipCode").value=code;
-  const codes=JSON.parse(localStorage.vipCodes||"[]");
-  codes.push(code);
-  localStorage.vipCodes=JSON.stringify(codes);
+function goLogin(){
+  window.location.href="/login";
 }
-
-function copyCode(){
-  navigator.clipboard.writeText(document.getElementById("vipCode").value);
-  alert("Kod kopyalandı");
-}
-
-setInterval(()=>{
-  if(sessionStorage.login && Date.now()-sessionStorage.login>SESSION){
-    alert("⏳ Oturum süresi doldu");
-    logout();
-  }
-},5000);
 </script>
 
 </body>
